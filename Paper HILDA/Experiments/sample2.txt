@@ -1,0 +1,105 @@
+> source('~/Projects/Clustine/Code/Clustine.R')
+Clustering a data set with 102 columns and 1994 rows.
+'Mclust' model object:
+ best model: diagonal, equal volume, varying shape (EVI) with 3 components
+Cluster testing phase
+Done
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high PctPersDenseHous, low medFamInc
+Cluster 2: low medFamInc, low PctPersDenseHous
+Cluster 3: low PctPersDenseHous, high medFamInc
+*** Satisfied? (Y/N)Y
+*** Zoom into cluster: 3
+
+
+
+Clustering a data set with 102 columns and 836 rows.
+'Mclust' model object:
+ best model: diagonal, equal volume and shape (EEI) with 3 components
+Cluster testing phase
+Done
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high PctForeignBorn, high PersPerOwnOccHous
+Cluster 2: low PctForeignBorn, low PersPerOwnOccHous
+Cluster 3: high PctForeignBorn, low PersPerOwnOccHous
+*** Satisfied? (Y/N)N
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high PersPerOccupHous, high PctRecImmig5
+Cluster 2: low PctRecImmig5, low PersPerOccupHous
+Cluster 3: high PctRecImmig5, low PersPerOccupHous
+*** Satisfied? (Y/N)N
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high OwnOccMedVal, high householdsize, low PctNotHSGrad
+Cluster 2: low OwnOccMedVal, high PctNotHSGrad, low householdsize
+Cluster 3: high OwnOccMedVal, low householdsize, low PctNotHSGrad
+*** Satisfied? (Y/N)N
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high PctFam2Par, high PctRecImmig10
+Cluster 2: low PctRecImmig10, low PctFam2Par
+Cluster 3: high PctRecImmig10, low PctFam2Par
+*** Satisfied? (Y/N)N
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high medFamInc, high PctSameHouse85, low PctPersDenseHous
+Cluster 2: low medFamInc, low PctPersDenseHous, high PctSameHouse85
+Cluster 3: high PctPersDenseHous, low PctSameHouse85, high medFamInc
+*** Satisfied? (Y/N)N
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high PctRecImmig8, high PersPerFam
+Cluster 2: low PctRecImmig8, low PersPerFam
+Cluster 3: high PctRecImmig8, low PersPerFam
+*** Satisfied? (Y/N)N
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high medIncome, low PctOccupManu, low NumUnderPov
+Cluster 2: low medIncome, high PctOccupManu, low NumUnderPov
+Cluster 3: low medIncome, high NumUnderPov, low PctOccupManu
+*** Satisfied? (Y/N)Y
+*** Zoom into cluster: 1
+Clustering a data set with 102 columns and 201 rows.
+'Mclust' model object:
+ best model: diagonal, equal volume and shape (EEI) with 3 components
+Cluster testing phase
+Done
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: low PctRecImmig5, low PersPerOccupHous
+Cluster 2: high PctRecImmig5, low PersPerOccupHous
+Cluster 3: high PersPerOccupHous, low PctRecImmig5
+*** Satisfied? (Y/N)N
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: low medFamInc, low PersPerFam, high NumUnderPov
+Cluster 2: high NumUnderPov, high medFamInc, low PersPerFam
+Cluster 3: high medFamInc, low NumUnderPov, high PersPerFam
+*** Satisfied? (Y/N)Y
+*** Zoom into cluster: 3
+Clustering a data set with 102 columns and 77 rows.
+'Mclust' model object:
+ best model: diagonal, equal volume and shape (EEI) with 3 components
+Cluster testing phase
+Done
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high medIncome, low PctPersDenseHous
+Cluster 2: high PctPersDenseHous, low medIncome
+Cluster 3: low medIncome, low PctPersDenseHous
+*** Satisfied? (Y/N)Y
+*** Zoom into cluster: 0

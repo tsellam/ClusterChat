@@ -1,0 +1,66 @@
+> source('~/Projects/Clustine/Code/Clustine.R')
+Clustering a data set with 55 columns and 6823 rows.
+'Mclust' model object:
+ best model: diagonal, varying volume and shape (VVI) with 3 components
+Cluster testing phase
+Done
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high Personal_earnings, low Average_hours_actually_worked
+Cluster 2: high Personal_earnings, high Average_hours_actually_worked
+Cluster 3: low Personal_earnings, low Average_hours_actually_worked
+*** Satisfied? (Y/N)Y
+*** Zoom into cluster: 1
+Clustering a data set with 55 columns and 3352 rows.
+'Mclust' model object:
+ best model: diagonal, equal volume and shape (EEI) with 3 components
+Cluster testing phase
+Done
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high Total_tax_revenue, low Rooms_per_person
+Cluster 2: very high Rooms_per_person, low Total_tax_revenue
+Cluster 3: high Rooms_per_person, very low Total_tax_revenue
+*** Satisfied? (Y/N)N
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high Time_devoted_to_leisure_and_personal_care, low Self_reported_health
+Cluster 2: high Self_reported_health, low Time_devoted_to_leisure_and_personal_care
+Cluster 3: high Self_reported_health, high Time_devoted_to_leisure_and_personal_care
+*** Satisfied? (Y/N)Y
+*** Zoom into cluster: 3
+Clustering a data set with 55 columns and 1133 rows.
+'Mclust' model object:
+ best model: diagonal, equal volume and shape (EEI) with 3 components
+Cluster testing phase
+Done
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: low Self_reported_health, high Long_term_unemployment_rate
+Cluster 2: low Long_term_unemployment_rate, low Self_reported_health
+Cluster 3: high Self_reported_health, low Long_term_unemployment_rate
+*** Satisfied? (Y/N)Y
+*** Zoom into cluster: 3
+Clustering a data set with 55 columns and 661 rows.
+'Mclust' model object:
+ best model: diagonal, equal volume and shape (EEI) with 3 components
+Cluster testing phase
+Done
+Clustering columns.
+Plotting....
+*** Here are the clusters:
+Cluster 1: high Self_reported_health, low ROWID
+Cluster 2: high ROWID, very low Self_reported_health
+Cluster 3: low Self_reported_health, very high ROWID
+*** Satisfied? (Y/N)Y
+*** Zoom into cluster: 0
+
+
+
+
+
+
