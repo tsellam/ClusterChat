@@ -133,12 +133,99 @@ clustine_feature_select <- function(data, objective, d){
 
    cat("Done\n")
    return(out)
-
-
 }
 
 
+clustine_deduplicate <- function(data, objective, d){
+
+
+   # Deduplication-related precomputations
+   cor_matrix = 1 - cor(data, use = "pairwise.complete.obs")
+   K = ceiling(ncol(data) / 3)
+   col_clusters = pam(as.dist(cor_matrix), K, do.swap = FALSE,
+                      keep.diss = F,
+                      keep.data = F
+                      )
+
+   # Cluster names
+   clu_names = unique(objective)
+
+   # Cluster counts
+   clu_count = table(objective)
+
+   # Cluster means
+   clu_mean =  aggregate(data, by = list(Class=objective), mean, na.rm = T)
+   clu_mean =  clu_mean[order(clu_mean$Class), ]
+   clu_mean = t(clu_mean[,colnames(clu_mean) != 'Class'])
+
+   # Cluster variances
+   clu_sigma_agg =  aggregate(data, by = list(Class=objective), var, na.rm = T)
+   clu_sigma_agg =  clu_sigma_agg[order(clu_sigma_agg$Class), ]
+
+   sigma_clusters = clu_sigma_agg[[1]]
+   clu_sigma_agg =  clu_sigma_agg[,-1]
+   sigma_per_clu = lapply(sigma_clusters, function(clu){
+      M = diag(clu_sigma_agg[clu,])
+      rownames(M) = colnames(clu_sigma_agg)
+      colnames(M) = colnames(clu_sigma_agg)
+      M
+   })
+   clu_sigma = list2array(sigma_per_clu)
+
+
+
+   # Gets descriptive columns and comment
+   charac_col = list()
+
+   for (class in clu_names){
+
+      out = list()
+
+      # Gets means and variances of columns in selection
+      sel_means = clu_mean[,class]
+      sel_vars  = diag(clu_sigma[,,class])
+      sel_count = clu_count[class]
+
+      # Gets moments of the remainder
+      out_class = setdiff(clu_names, class)
+      out_moments = aggregate_moments(
+         counts = clu_count[out_class],
+         means  = clu_mean[,out_class],
+         covm   = clu_sigma[,,out_class]
+      )
+      out_count = out_moments$count
+      out_means = out_moments$means
+      out_vars  = out_moments$vars
+
+      # Cohen d to rank
+      pooled_vars = (sel_count * sel_vars + out_count * out_vars) /
+         (sel_count + out_count)
+      pooled_sds  = sqrt(pooled_vars)
+      cohen_ds    = abs((sel_means - out_means) / pooled_sds)
+
+      # Output
+      charac_col[[class]] = names(sort(cohen_ds, decreasing = T))[1:d]
+   }
+
+   charac_col = unlist(charac_col)
+   table_charac_col = sort(table(charac_col), decreasing = T)
+   out = names(table_charac_col)[1:3]
+
+
+   # Deduplication
+   out_dedup = unique(col_clusters$medoids[col_clusters$clustering[out]])
+
+   cat("Done\n")
+   return(out_dedup)
+}
+
+
+
 clustine_just_compute <- function(data, objective, d){
+
+   # Precomputations
+   cor_matrix = 1 - cor(data, use = "pairwise.complete.obs")
+
 
    # Cluster names
    clu_names = unique(objective)

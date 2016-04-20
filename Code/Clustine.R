@@ -42,7 +42,7 @@ computeModel <- function(data, max_clusters = 3, sample_init_size = 900){
    return(model)
 }
 
-compute_col_clusters <- function(data, max_cols = 3, black_list = c()){
+compute_col_clusters <- function(data, max_cols = 8, black_list = c()){
    cat('Clustering columns.\n')
 
    cor_matrix = 1 - cor(data)

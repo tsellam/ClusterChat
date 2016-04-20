@@ -1,86 +1,300 @@
 \section{Introduction}
 \label{sec:intro}
 
-For many database users, writing database queries is a struggle. It is a
-struggle because mastering a query language requires training. It is also a
-struggle because it requires a precise and exhaustive knowledge of the
-database. Users must know exactly which table to use, which columns to inspect
-and which conditions to set. When users \emph{explore} their data, that is,
-when they are interrogating it to discover its content, they do not have this
-knowledge.
+According to the Economist, over 2.5 billion people have access to a messaging
+app such as Facebook Messenger or WhatsApp. This number could reach 3.6 billion
+within couple of years - half of humanity. It is therefore no surprise that
+Internet giants have developed commercial services for this canal. Most of
+those take the form of \emph{chatbots}, that is, conversational engines.  Among
+those, Facebook's M and Microsoft's Tay have attracted lots of attention
+recently.  Also, dozens of smaller businesses have also proposed task-specific
+alternatives, for instance to access bank services, book flights or schedule
+meetings. In fact, the so-called bot economy has grown so quickly that
+well-established firms such as Facebook and Russia's Telegram are now
+dedicating entire market places to it.  And indeed, chatbots have a number of
+advantages compared to traditional applications and Web services. They rely on
+natural language, which implies a short - ideally inexistent - learning phase.
+Since they live in the user's messaging app, they are lightweight.
+They require no client installation, no maintenance and they are possibly more
+power efficient. Finally, we can easily translate them to audio with to
+Text-to-Speech software, an important option for visually impaired users.
 
-To address this problem, software editors and researchers have come up
-\emph{natural language interfaces} to databases. The idea is to let users
-interrogate their databases with plain English. It is then up to the system to
-interpret the query and cast it in a form that the underlying data manager can
-understand. This approach constitutes a huge leap forward, but it is not exempt
-of drawbacks. For a start, it still assumes that they user has a specific query
-in mind. Even if they do not know how to express this query SQL, they must have
-some idea of which column to use. Furthermore, it only solves half  of the
-problem: the users express their queries in SQL, but they still obtain their
-results in tabular format. If the output contains a few tuples and a handful of
-columns, this paradigm is ideal. But what if the users are interested in
-broader queries?
+In this paper, we discuss how to engineer a chatbot to help users query large
+tables.  More specifically, we focus on the interface between users and the
+system. How should the users write their queries? And how should the system
+answer? Our aim is to develop accessible and efficient techniques to
+interrogate a database through a messaging app.  The challenges we face are
+twofolds. To begin with, our medium imposes draconian restrictions on the
+quantity of information that we can convey. Our users expect short messages,
+and the support for visuals is close to null - we can send a few pictures in
+the best case.  Furthermore, we target a ``casual'' population, that is, users
+with a weak knowledge of the database and no programming skills.  Typically, we
+envision managers searching for quick answers on their mobile phones. In this
+scenario, SQL is not an option.
 
-A popular alternative is to use visual tools, such as Tableau. With these
-packages, users can write queries with drag and drops and obtain their results
-with visualizations. But this approach has its limits too. It does not solve
-the starting point problem, as users still need to write a query. Furthermore,
-visualizations are no panacea. Their main drawback come from the fact that they
-attempt to show everything. Consequently, they require training (though mild),
-attention, and they cannot scale beyond a few dozen variables.
+Database researchers have proposed natural language interfaces to databases for
+at least two decades~\cite{androutsopoulos1995natural}. But those solutions
+only solve half of the problem. They help users write queries, but they do not
+help them understand their results.  They return tables of data, as traditional
+database front-ends do.  But tables are neither user-friendly nor
+space efficient. They can quickly saturate the screen and overwhelm users -
+especially on a smart phone.  
 
-In this paper, we introduce Clustine, the first conversational agent for data
-exploration. Our system remains on two pillars. First, it uses natural language
-during the whole exploration process. This means that it collects queries, but
-also \emph{answers} in natural language. While several papers have studied the
-first direction, little to none of them have tackled the reverse direction.
-Second, our system is proactive: it makes suggestions, instead of collecting
-queries passively. It is then up to the user to accept or reject these
-suggestions.
+Another shortcoming of natural language interfaces is that they assume that
+users know what they want, and they know where to find it. But in many cases,
+the users' requirements are too subjective or fuzzy to be easily cast as a
+query. For instance, how could we identify the ``young customers'' in a
+marketing database or the ``happy countries'' is a world survey? Ideally, the
+system should provide guidance. A few interfaces already offer this
+feature~\cite{li2014constructing}, but they focus on the database schema (e.g.,
+which columns and tables to use), not on the parameters of the query.
+
+This paper introduces Clustine, our prototype conversational agent. Clustine
+offers \emph{bi-directional} support for natural language: it collects queries,
+but also summarizes their results - a research direction which has so far
+received little attention in the literature. Clustine is also \emph{proactive}.
+Instead of collecting queries passively, it makes suggestions, collects
+feedback and reacts accordingly.
+
+We summarize our contributions as follows:
+\begin{itemize0}
+    \item We introduce Clustine, a prototype chatbot based on cluster analysis
+        and interactive query refinement.
+    \item We present an algorithm to describe query results in a compact and
+        informative fashion.
+    \item We describe two use cases and an early experimental evaluation based
+        on 10 real datasets.
+\end{itemize0}
 
 This paper is an early-stage report: we present the main ideas behind Clustine
-and present preliminary experiments to show that they are feasible.
-Nevertheless, we will omit a few details and leave questions open for future
-publications. This work is partly inspired by Blaeu, a system to explore data
-with cluster analysis. The main difference is that Blaeu relies heavily on
-visualizations and expert judgment.
+and preliminary experiments to show that they are feasible.  Nevertheless, we
+will omit a few details and leave questions open for future publications. 
 
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{Experiments/UseCaseIntro}
+  \caption{Demonstration of Clustine.}
+  \label{fig:Overview}
+\end{figure}
 \section{Overview}
 \label{sec:overview}
 
-Clustine has several advantages compared to visual tools such as Tableau. It is
-proactive, in the sense that it suggests questions to the user. Also, its scope
-is ever broader that that of Tableau: it can be used by users with no literacy
-in data analysis, user who rely on audio (e.g., visually impaired users), and
-it is generally well suited to educational contexts. But the strengths of our
-method are also its weaknesses. As Clustine makes ``editorial choices'', it
-omits potentially interesting information about the data. Furthermore, full
-text is much less space efficient than charts. Therefore, Clustine is
-conceptually, but also materially limited.
+Let us define our use case. Our users have access to a large table, containing
+several dozen columns and 10,000s of tuples. They are interested in a small
+portion of this table.  Our aim is to develop a chat-based service to help them
+find and consult this interesting portion of tuples.
+
+Our solution is based on iterative query refinement. Clustine inspects the
+dataset, partitions it into a few groups, and ask the user whether they are
+interested in one of the partitions. If the answer is positive, then Clustine
+``drills'' into the corresponding partition. It splits it into even smaller
+groups and asks for more feedback.  If the answer is negative, then Clustine
+finds an alternative way to partition the data. It presents the new results to
+the user, and repeats the cycle.  To partition the database, Clustine relies on
+\emph{cluster analysis}. It forms groups such that similar items are grouped
+and different items are separated.  Thanks to this method, it can provide
+coherent options: each partition effectively covers one ``family'' of tuple.
+%This method is inspired by Blaeu~\cite{sellamTKDE}, a previously
+%published data analysis system based on visualizations.
+
+Let us illustrate this process with an example. We have access to a database of
+socio-economic indicators, describing a few thousand regions of the world.  Our
+aim is to find the countries with the ``best conditions of life'', a purposely
+ill-defined task.  Figure~\ref{fig:Overview} illustrates how to build the query
+with Clustine.  It shows our system's main operations: 
+\begin{itemize0}
+    \item Zoom in one or several partition to refine the selection of
+        tuples. 
+    \item Request an alternative description of
+        the partitions, to get another view of the data.
+    \item Request a visualization of the partitions, to be sent as an
+        image (we demonstrate this feature in
+        Section~\ref{sec:demo}).
+    \item Exit: Clustine closes the conversation and returns
+        a sample of the selected tuples.
+\end{itemize0}
+Observe how our method differs from the usual query-result paradigm. Classic
+database front-ends rely on open questions. The users face a ``blank page'',
+which they fill as they see fit. In our case, the system probes the users
+through a sequence of closed, multiple choice questions. These statements have
+two roles. First, they summarize the current selection tuples, as they identify
+and describe its main components. They offer a text-based alternative to
+tables and graphics. Second, they provide options for query refinements. Thanks to
+this mechanism, the users can compose complex queries without a writing a
+single line of SQL.
+
 
 \section{Architecture}
 \label{sec:architecture}
 
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=.7\columnwidth]{Architecture}
+  \caption{Overview of Clustine's Architecture.}
+  \label{fig:architecture}
+\end{figure}
+
+Figure~\ref{fig:architecture} presents Clustine's architecture.  Our system
+relies on three components. The first component takes a sample of tuples from
+the database and detects clusters. The second one generates textual synopses of
+these clusters. The last component collects the users' input and infers what
+action to carry out next. We implemented the first and last stages with
+well-known techniques, which we briefly discuss in this section. Designing the
+second module, which generates text from clusters, was more challenging. We
+tackled it with an original framework, described in Section~\ref{sec:describingClu}.
+
+\textbf{Cluster Detection.} In principle, we could implement clustering with
+any method from the literature. In practice, we opted for the EM algorithm, a
+generalized variant of k-means~\cite{bishop2001bishop}. This algorithm can deal
+with mixed data types and missing values. Furthermore, it returns the mean
+vector and covariance matrix associated with each cluster. We will exploit this
+information extensively in the description phase. To determine the number of
+partitions, we use Bayesian Information Criterion~\cite{bishop2001bishop}, a
+well established method from the literature. To ensure that the descriptions
+are compact, we set a low cap on this value (e.g., 3 or 4). This approach
+causes no loss of generality : the smaller clusters do not disappear, they
+simply appear later in the exploration.
+
+\textbf{Input Understanding.}  We implemented this module with a Naive Bayes
+classifier~\cite{bishop2001bishop}, trained to recognize which action the user
+is asking for. We encode the data with bags of words, after lower casing and
+stemming.  When the users request zooms, we extract the relevant cluster
+numbers with regular expressions.
+
+\section{Describing Clusters}
+\label{sec:describingClu}
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=\columnwidth]{Ranking}
+  \caption{Clustine seeks variables on which the clusters' distributions are
+  well separated.}
+  \label{fig:Ranking}
+\end{figure}
+
+We now turn to an important challenge in our study : how to describe a set of
+partitions with natural language? The EM algorithm defines each cluster by
+its center (i.e., vector of means) and its covariance matrix.  But this
+information is difficult to interpret. For a start, it involves all the columns
+in the database. When the data contains dozens or hundreds variables,
+mentioning them all clutters the screen and overwhelms the users.
+Furthermore, novice users may not be comfortable with raw data.  They may
+prefer high level magnitude judgments (e.g., ``Your data has high values for
+Income'') rather than literal numbers  (e.g., ``The average value for Income is
+42.5 and the variance of 0.4''). This section discusses Clustine's editorial
+choices, that is, which columns it uses to describe the clusters, and how it
+conveys the values of the subsequent tuples.
+
+\textbf{Ranking Variables.} Clustine described the clusters with a few columns
+only. To do so, it identifies ``high contrast'' variables, that is, variables
+on which the tuples in the cluster are different from those in the rest of the
+data. We illustrate this idea with Figure~\ref{fig:Ranking}.  
+
+To quantify the
+contrast associated with each variable, our system uses Cohen's $d$, from the
+classic statistics literature~\cite{cohen1977statistical}. Consider a cluster
+$C$. Let $\bar{x}_C$ (resp.  $\bar{x}_{\overline{C}}$) describe the mean of the
+variable $x$ for the tuples inside (resp. outside)  the cluster. The variable
+$s$ is the pooled standard deviation of the two sets. We define Cohen's $d$ as
+follows:
+$$
+d = \frac{\bar{x}_C -\bar{x}_{\overline{C}}}{s}
+$$
+Admittedly, Cohen'$d$ is not the most versatile measure of statistical
+dissimilarity. More sensitive alternatives exist, such as the Kullback-Leibler
+divergence~\cite{bishop2001bishop}.  But this indicator is practical.
+It is based on means and variances, which we obtain ``for free''
+from the EM algorithm. Also, its sign and magnitude are directly interpretable. A
+positive value implies that the tuples in the cluster have a higher value than
+those in the rest of the database, while a negative value indicates that the
+tuples have a low value on the chosen variable. A high magnitude indicates a
+large deviation, while a low magnitude describes small variations. Thus,
+we can exploit Cohen's $d$ value directly to generate textual descriptions.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=.8\columnwidth]{Explanations}
+  \caption{Workflow of Clustine's cluster description module.}
+  \label{fig:descriptions}
+\end{figure}
+
+\textbf{Cluster description pipeline.} Figure~\ref{fig:descriptions} presents
+Clustine's description pipeline. During the first step, our system computes the
+contrast associated with each variable. It ranks them and selects the
+top $K$, for some arbitrary $K$. Then it checks if the results are
+statistically significant, that is, how likely it is that they were caused by
+chance. By default, it uses t-tests, the counterpart of Cohen's $d$ in the
+hypothesis testing literature~\cite{cohen1977statistical}. It discards the
+variables associated with low confidences. Once this process has completed,
+Clustine produces the textual explanations. It first deduplicates the
+variables (cf. next paragraph). It then generates the text, using handcrafted
+rules and regular expressions.  Finally, it resolves conflicts. The aim
+of this phase is to detect and hierarchize the clusters that have with the
+same description. For instance, if two partitions have the label ``High
+income'', Clustine will detect  which one covers the highest values and rename it
+to ``Very high income''.
+
+\textbf{Deduplication.} Our variable ranking scheme may lead to redundancy.
+This problem may occur when several columns contain the same data under
+different names or encodings (e.g., ``Income'', ``IncomeCode'' and
+``IncomeCategory''). To solve it, Clustine deduplicates the columns.  It does
+so in three steps. First, it obtains the correlation between every pair of
+variables from the database. It reads this information directly from the output
+of the EM algorithm. Second, it detects clusters of correlated columns, using a
+distance-based clustering algorithm, such as hierarchical clustering or
+PAM~\cite{bishop2001bishop}.  Finally, it selects one representative column for
+each cluster.  The deduplication step enforces that the results are diverse,
+but it comes with runtime and accuracy penalties (described in
+Section~\ref{sec:eval}). Therefore, we leave it as an option, to be chosen by
+the user.
+
+\textbf{Redescription.} If the users are not satisfied with the selection of
+columns, they can request an alternative one. Then, Clustine inserts the
+current selection of variables in an exclusion list and reruns the whole
+pipeline described in Figure~\ref{fig:descriptions}. To save time, it reuses
+intermediate results from the previous iterations, such as the contrast
+scores.
+
 \section{Use Cases}
 \label{sec:demo}
 
-\begin{figure}[t]
+\begin{figure}[t!]
   \centering
   \includegraphics[width=\columnwidth]{Experiments/UseCaseFull}
   \caption{Demonstration 1: the OECD dataset.}
   \label{fig:UseCase1}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[t!]
   \centering
   \includegraphics[width=\columnwidth]{Experiments/UseCase2}
   \caption{Demonstration 2: cities, crime and wealth in the US.}
   \label{fig:UseCase2}
 \end{figure}
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{0.48\columnwidth}
+        \includegraphics[width=\textwidth]{Experiments/CaseValidation1}
+        \caption{OECD dataset, first view.}
+        \label{fig:validation1}
+    \end{subfigure}
+    ~
+    \begin{subfigure}[b]{0.48\columnwidth}
+        \includegraphics[width=\textwidth]{Experiments/Case2Validation1}
+        \caption{Crime dataset, first view.}
+        \label{fig:validation2}
+    \end{subfigure}
+%    ~
+%    \begin{subfigure}[b]{0.25\textwidth}
+%        \includegraphics[width=\textwidth]{Experiments/Case2Validation8}
+%        \caption{A mouse}
+%        \label{fig:validation3}
+%    \end{subfigure}
+    \caption{Two-dimension views of Clustine's suggestions.}\label{fig:propvis}
+\end{figure}
 
 We now demonstrate Clustine with two real-life scenarios.  We start with the
-full version of case we used as running example throughout the paper. Our
+full version of the use case on which we based our running example. Our
 database comes from the OECD, an international economic
 organization\footnote{http://stats.oecd.org/}. It describes economic, social
 and well-being indicators for 2,180 regions in 31 countries, across three
@@ -91,60 +305,52 @@ task.
 Figure~\ref{fig:UseCase1} presents our interaction with Clustine. We exploited
 three of its five suggestions. First, we selected the regions with the highest
 salaries and the lowest number of hours worked.  We then refined our selection
-with attributes related to leisure time, health, then unemployment.  Observe
-that Blaeu's second suggestion was irrelevant to us. We simply discarded it by
+with attributes related to leisure time, health, then unemployment. Observe
+that Clustine's second suggestion was irrelevant to us. We simply discarded it by
 requesting a new view.
 
 Our second scenario is based on the Crime and Communities dataset, from the UCI
 repository\footnote{http://archive.ics.uci.edu/ml/}. The data contains 128
 crime and socio-economic indicators for 1,994 US cities. Our aim is to find the
 richest and safest communities. Figure~\ref{fig:UseCase2} represents Clustine's
-suggestions and our answers. We see that the system manages to narrow our
-selection to 77 rows in six questions. Also, the suggestions correspond to our
-intuition. For instance, partitioning US cities on the variables Family Income
-and Housing Density seemed natural to the author of this paper.  Finally, this
-use case also highlights one limit of Clustine's model: it assumes that the
-database's column names are self-explanatory. Unfortunately, this assumption
-does not always hold. We leave the subsequent challenges for future work.
+suggestions and our answers. The descriptions correspond to what we could
+expect.  For instance, partitioning the US cities according to their income and
+their housing situation seems natural to us. But this use case also highlights
+one limit of Clustine: it assumes that the database's column names are
+self-explanatory. Unfortunately, this assumption does not always hold. We leave
+this problem open for future work.
 
 After each suggestion, Clustine gives the option to visualize the underlying
 data. The aim is to let users perform ``sanity checks'' and obtain more
-details. Figure~~\ref{fig:propvis} presents three of those visualizations - one
-for the OECD dataset, two for the Crime dataset. In all cases, we observe that
-the labels of the clusters do match their position in the attribute space.
- 
-\begin{figure*}
-    \centering
-    \begin{subfigure}[b]{0.3\textwidth}
-        \includegraphics[width=\textwidth]{Experiments/CaseValidation1}
-        \caption{OECD dataset, first suggestion.}
-        \label{fig:validation1}
-    \end{subfigure}
-    ~
-    \begin{subfigure}[b]{0.3\textwidth}
-        \includegraphics[width=\textwidth]{Experiments/Case2Validation1}
-        \caption{Crime dataset, first suggestion.}
-        \label{fig:validation2}
-    \end{subfigure}
-    ~
-    \begin{subfigure}[b]{0.3\textwidth}
-        \includegraphics[width=\textwidth]{Experiments/Case2Validation8}
-        \caption{A mouse}
-        \label{fig:validation3}
-    \end{subfigure}
-    \caption{Two-dimension views of Clustine's suggestions.}\label{fig:propvis}
+details. Figure~~\ref{fig:propvis} presents two of these visualizations - one
+for each dataset. In both cases, we observe that the labels of the clusters
+match their position in the attribute space.
+
+
+
+
+\begin{figure*}[!t]
+  \centering
+  \includegraphics[width=\textwidth]{Experiments/F1_Scores}
+  \caption{Accuracy of the variable selection algorithms. Higher is better.}\label{pic:accuracy}
+\end{figure*}
+\begin{figure*}[!t]
+  \centering
+  \includegraphics[width=\textwidth]{Experiments/Timings}
+  \caption{Execution time of the variable selection algorithms. Lower is
+  better. The cross indicates that the experiment exceeded 1 second.}
+  \label{pic:runtime}
 \end{figure*}
 
-
-\section{Evaluation}
+\section{Validation of the Descriptions}
 \label{sec:eval}
 We now present our experimental results. To be efficient, Clustine must detect
 meaningful clusters, describe them accurately and do so with a low latency.
 The first aspect depends entirely on our choice of clustering algorithm.
-Because we used EM, a well known algorithm~\cite{dempster1977maximum}, we will
-not discuss it further in this paper. We will however present our evaluation of
-Clustine's description engine. We will first focus on its accuracy, then on its
-runtime.
+Because we used EM, a well known algorithm~\cite{bishop2001bishop}, we will not
+discuss it further in this paper. We will instead focus on  Clustine's column
+selection engine, described in Section~\ref{sec:describingClu}. We will
+evaluate its accuracy, then its runtime.
 
 \begin{table}[!t]
     \centering
@@ -154,10 +360,10 @@ runtime.
         Dataset & Columns & Rows\\
         \hline
         ShapeRecog & 16 & 180\\
-        Glass & 8 & 226\\
-        Vowels &  9&1,000  \\
+        %Glass & 8 & 226\\
+        %Vowels &  9&1,000  \\
         BreastCancer & 34 & 234\\
-        PenDigits & 17 & 7,496\\
+        %PenDigits & 17 & 7,496\\
         MAGICTelescope & 11 & 19,022\\
         AdultCensus & 14 & 32,578\\
         LetterRecog & 16 & 20,000\\
@@ -165,84 +371,95 @@ runtime.
         BankMarketing & 17 & 45,213\\
         Insurance & 86 & 5,900\\
         MuskMolecules & 167 & 6,600\\
+        Diabetic Data & 11 & 101,818\\
         \hline
     \end{tabular}
     \caption{Characteristics of the datasets.}
     \label{tab:datasets}
 \end{table}
 
-\subsection{Experimental Setting}
-All the experiments that follow are based on 12 datasets from the UCI
+All the experiments that follow are based on 10 datasets from the UCI
 repository. We present their characteristics in Table~\ref{tab:datasets}. Our
 experimental system is a MacBook Pro with an 2.6 GHz Intel Core i5 processor
-and 8GB main memory. All our code is written in R, exploiting its native C
+and 8 GB main memory. We write our code in R, exploiting its native C
 primitives for common operations (e.g., computing covariance matrices) and our
-own C library for information theoretic operations (used in one of our
+own C library for information theoretic operations (used in one of the
 baselines).
-
-In this section, we evaluate the quality of Clustine's column selection
-algorithms. Our aim is to test whether the columns it choses are indeed
-``descriptive'', that is, contain information about the structure of the data.
-To do so, we use statistical classifiers. We first cluster each dataset with
-the EM algorithm, as Clustine does. We materialize the result in a vector, in
-which the $i^{\text{th}}$ component represent the cluster of the
-$i^{\text{th}}$ tuple. Finally, we train a classifier to associate each its
-tuple to its cluster, using only the columns provided by Clustine. If this
-operation succeeds, then we can conclude that the columns are ``instructive'':
-the projection contains all the information necessary to reconstitute the
-clustering structure of the whole data. Oppositely, if the classifier fails,
-then the chosen columns probably give a poor view of the data's overall
-distribution.  Technically, we used a 5-Nearest Neighbors classifiers. We chose
-it for its simplicity and efficiency. We measure the prediction accuracy with
-the F1 score on 10-fold cross validation. Higher is better.
-
-We benchmark Clustine's column selection algorithm against two standard feature
-selection algorithm.  The first algorithm \texttt{Wrap-kNN} is a \emph{wrapper}
-from the statistics literature~\cite{guyon2003introduction}. It builds sets of
-columns greedily. It adds variables one after other, keeping at each stop those
-that yield the best classification score. It stops when it obtained a view with
-$D$ dimensions. We expect it to be slow but accurate, since it optimizes
-exactly our metric. The algorithm \texttt{MutualInfo} computes the Mutual
-Information (i.e., statistical dependency) between each variable and the
-cluster assignment vector. It retains the top $D$ variables. We expect to be
-fast, but less accurate than \texttt{Wrap-kNN}. We also added a random baseline
-to ensure that the results are worth the effort.  By default, we set $D=3$. We
-ran each experiment five times and averaged the results.
-
-Compared to its competitors, Clustine has one qualitative advantage: it is a
-``white box''. Since it exploits differences of means and variances, it
-explains not only how much the clusters differ from one another but also
-\emph{how} they differ - a property on which Clustine relies heavily to create
-its explanations. Our hope is that it is also quantitatively better. Since we
-target real-time interaction, our algorithms should be faster than all the
-others, possibly at the cost of losses in accuracy.
 
 \subsection{Accuracy of the Column Selection}
 \label{sec:accuracy}
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{Experiments/F1_Scores}
-  \caption{Accuracy of the variable selection algorithms. Higher is better.}\label{pic:accuracy}
-\end{figure*}
+In this section, we evaluate the quality of Clustine's column selection
+algorithm. Our aim is to test whether the columns it choses are indeed
+``instructive''.  To do so, we exploit statistical classifiers. We first
+cluster the whole database with the EM algorithm - as our system does. We
+obtain one cluster label for each tuple. We then reduce the dataset, by
+selecting only the columns mentioned by Clustine. We train a classifier to
+infer the cluster labels from this reduced dataset.  If this operation
+succeeds, then we conclude that the columns are instructive: the projection
+contains the information necessary to reconstitute the structure of the whole
+data.  Oppositely, if the classifier fails, then the chosen columns probably
+give a poor view of the data's overall distribution.  Technically, we used
+5-Nearest Neighbors classifiers. We chose those for their simplicity and
+efficiency.  We measure the prediction accuracy with the F1 score on 5-fold
+cross validation.  Higher is better.
 
-Figure~\ref{pic:accuracy} presents the accuracy of our algorithms on each
+We confront Clustine's column selection method to two standard feature
+selection algorithm.  The first algorithm \texttt{Wrap-kNN} is a \emph{wrapper}
+from the statistics literature~\cite{guyon2003introduction}. It builds sets of
+columns greedily. It adds the variables one after other, keeping at each stop
+those that yield the best classification score. It stops once is has obtained a
+view with $K$ dimensions. We expect it to be slow but accurate, since it
+optimizes exactly our metric. The algorithm \texttt{MutualInfo} computes the
+Mutual Information (i.e., statistical dependency) between each variable and the
+vector of cluster labels, and it retains the top $K$ variables. We expect
+to be fast, but less accurate than \texttt{Wrap-kNN}. We also added a random
+baseline to ensure that the results are worth the effort.  By default, we set
+$K=3$. We run each experiment five times and average the results. 
+
+We present two variants of Clustine: with and without deduplication,
+resepectively denoted \texttt{Clustine} and \texttt{Clustine Dedup}. Since
+Clustine targets real-time interaction we target speed. We aim to be as fast as
+possible, while maintaining competitive accuracy scores.
+
+Figure~\ref{pic:accuracy} presents the accuracy of our algorithms for each
 dataset. We observe that \texttt{Wrap-kNN} dominates the scores in all cases.
-It is then followed by \texttt{Clustine} and \texttt{Wrap-kNN}, with a weak
-advantage for the former (\texttt{Clustine}'s score is equivalent or better
-than \texttt{Wrap-kNN}'s in 8 cases out of 12). The random strategy comes
-almost always last. In conclusion Clustine's accuracy is competitive: it is at
-least as a good as a well established feature selection algorithm.
+It is then followed by \texttt{Clustine} and \texttt{MutualInfo}, with a weak
+advantage for the former (\texttt{Clustine}'s score is equivalent or better in
+7 cases out of 10). The algorithm \texttt{Clustine Dedup.} comes next, and
+\texttt{Random} comes last. In conclusion, \texttt{Clustine} is competitive: it
+is at least good as a well established feature selection algorithm. However,
+the deduplication does incur a loss accuracy, as it eliminates all variables
+which appear as redundant. This effect is strongest with
+\texttt{MAGICTelescope}, where it discards 2 variables out of 3.
+%\subsection{Diversity of the Columns}
+%\label{sec:diversity}
+%
+%\begin{figure*}[t]
+%  \centering
+%  \includegraphics[width=.8\textwidth]{Experiments/Red_Scores}
+%  \caption{Mean pairwise correlation between the columns of the view. Higher
+%  indicates more redundancy. Lower indicates more diversity.}
+%  \label{pic:dedup}
+%\end{figure*}
+%
+%Our aim is to evaluate whether Clustine's optional deduplication step
+%``works'', that is, whether it removes the redundancy in the results.
+%Figure~\ref{pic:dedup} presents our results. To measure redundancy, we compute
+%the pairwise correlation between the columns in the results, reverse the
+%negative correlations, and computed the average. A high score indicates that
+%all the columns are strongly mutually dependent, and therefore the results
+%contain redundancy. A low score indicates that the columns are independent, and
+%therefore the results are diverse.
+%
+%In all cases, our strategy works: \texttt{Clustine Dedup.} does indeed yield
+%more diverse results than \texttt{Clustine}. However, there exists a few cases
+%in which \texttt{Wrap-kNN} yields even more diversity. We explain this results
+%with \texttt{Wrap-kNN}'s largest search space - which, we will see, also leads
+%to much higher execution times.
+%
 
 \subsection{Runtime of the Column Selection}
 \label{sec:speed}
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{Experiments/Timings}
-  \caption{Execution time of the variable selection algorithms. Lower is
-  better. The cross indicates that the experiment exceeded 0.8 seconds.}
-  \label{pic:runtime}
-\end{figure*}
 
 We present the results of our runtime experiments in Figure~\ref{pic:runtime}.
 In all cases, \texttt{Clustine} is comparable to or much faster than
@@ -250,26 +467,75 @@ In all cases, \texttt{Clustine} is comparable to or much faster than
 linearly with the number of rows and columns, the difference comes from the
 constant factors. Computing and comparing means and variances appears faster
 than estimating mutual informations (both operations were implemented in C).
-We conclude that our algorithm is aggressively fast.
 
-When we measured \texttt{Clustine}'s runtime, we accounted for the time
-necessary to compute the mean and variance of each column. This measurement is
-pessimistic. In practice, we obtain this information ``for free'' from the EM
-algorithm, and therefore we can perform the column selection without even
-reading the data. The bars associated with \texttt{Clustine Embedded} in
-Figure~\ref{pic:runtime} show the runtime associated with the remaining
-computations. We observe that they are almost negligible. Therefore, in
-practice, the computational cost depends almost entirely on the EM algorithm.
-We can consider the description itself as a minor overhead, demanding a few
-milliseconds at worse.
+%Figure~\ref{pic:runtime} also shows the runtime penalty incurred by the
+%deduplication. If the data contains relatively few columns, then the
+%performance of \texttt{Clustine Dedup.} is equivalent to that of
+%\texttt{MutualInfo} - a fast algorithm. But the deduplication take more time
+%with large data sets, such as \texttt{Musk Molecules}. 
 
+To measure Clustine's runtime, we accounted for the time necessary to compute
+the mean and variance of each column. But this measurement is very pessimistic.
+In practice, we obtain this information from the EM algorithm, and therefore we
+can perform the column selection without even reading the data.  The bars
+associated with \texttt{Clustine Embedded} in Figure~\ref{pic:runtime} show the
+runtime of the computations that actually occur in practice (that is,
+everything except the calculation of the means and variances, including the
+deduplication). We observe that they are almost negligible.  In conclusion, the
+cost of describing the partitions is almost entirely shared with the clustering
+step.
 
 \section{Related Work}
 \label{sec:related}
-See also \cite{li2014constructing}.
+
+\textbf{Data exploration.} During the last decade, several papers have
+described systems and interfaces to support users with no precise requirements,
+or no preliminary knowledge of the data. The effort is trans-disciplinary: it
+involves the database researchers~\cite{idreos2015overview} as well as the
+visualization community~\cite{StolteTangHanrahan2002}. Among others, existing
+solutions exploit sampling~\cite{agarwal2012blink},
+visualizations~\cite{StolteTangHanrahan2002}, interactive query
+refinement~\cite{dimitriadou2014explore}, relevance
+feedback~\cite{akbarnejad2010sql} or modern interface devices such as touch
+screens~\cite{jiang2015snaptoquery}. But to the best of our knowledge, no one
+has ever attempted to develop a chatbot to support this task. Our work is  very
+close to Blaeu~\cite{sellamTKDE}, which also uses cluster analysis to help
+users build queries. But Blaeu is relies exclusively on visuals, it provides no
+mechanism to summarize its findings. Clustine is also close to
+SeeDB~\cite{vartak2015see}, which recommends database views. But SeeDB helps
+users visualize the result of their queries, it does not help writing them.
+Furthermore, it relies almost exclusively on visuals.
+
+\textbf{Natural language datbase interfaces.} Authors have introduced database
+interface based on natural language for at least two
+decades~\cite{androutsopoulos1995natural}. Li and Jagadish's system is
+probably one of the most successful example of this
+effort~\cite{li2014constructing}. But these interfaces rely on the classic
+query-result paradigm.  Typically, those system helps users compose SQL
+statements, using schema information. In contrast, we help them understand
+their results, using machine learning. Those two approaches are orthogonal. Our
+work is also close to ABCD~\cite{Lloyd2014ABCD}, a natural language-based
+machine learning engine. But this system focuses exclusively on regression
+models, while are target database queries and cluster analysis.
+
 
 \section{Conclusion}
-\label{sec:conclusion}
-During the last few years, several companies have introduced virtual
-assistants: Cortana, Siri, Google Voice. In this paper, we investigated how to
-develop a similar system for data exploration.
+\label{sec:conclusion} 
+In this paper, we presented Clustine, our prototype chatbot to help users
+interrogate large tables.  Compared to existing natural language interfaces,
+our system is based on inverted querying: instead of aksing the users to write
+queries from scratch, the software comes up with its own suggestions. Thanks to
+this paradigm, our users can compose complex queries with only a shallow
+knowledge of the data, a minimal amount of characters and an end-to-end support
+for natural language. 
+
+Our main priority for the future is to run extensive user studies, in order to
+further evaluate and improve our system. More generally, little to no work has
+addressed the problem of describing data with natural language. We are
+convinced that this research direction has a bright future ahead.
+
+\section{Acknowledgments}
+\label{sec:ack} 
+This work was supported by the Dutch national program
+COMMIT
+

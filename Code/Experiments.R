@@ -10,9 +10,9 @@ file_list <- list.files(path = files_location, pattern = "*.arff$")
 sizes <- file.info(paste0(files_location, "/", file_list))$size
 file_list <- file_list[order(sizes)]
 
-OUT_FILE <- "ExperimentsResults2.log"
+OUT_FILE <- "ExperimentsResults.log"
 file.rename(OUT_FILE, paste0("OLD_", OUT_FILE))
-cat('Algorithm', 'File', 'ncol', 'Runtime', 'F1 Score\n',
+cat('Algorithm', 'File', 'ncol', 'Runtime', 'Redundancy', 'F1 Score\n',
     sep = '\t', file = OUT_FILE, append = T)
 
 
@@ -28,17 +28,29 @@ evaluate_strategy <- function(col_selector, file, clu_assign, D, file_name = '')
    TIME <- proc.time()["elapsed"]
    cols_to_evaluate = col_selector(file, clu_assign, D)
    TIMEDIFF <- proc.time()["elapsed"] - TIME
+   cols_to_evaluate = na.omit(cols_to_evaluate)
    print(cols_to_evaluate)
 
    # Evaluates strategy
    cat("Evaluating classification quality....")
-   F1_score = kNN_strength(set = file[,cols_to_evaluate], target = clu_assign)
+   F1_score = kNN_strength(set = file[,cols_to_evaluate, drop=F], target = clu_assign)
    print(F1_score)
 
-   # Logging the result
-   cat(as.character(match.call()[2]), file_name, D, TIMEDIFF, paste0(F1_score, '\n'),
-         sep = '\t', file = OUT_FILE, append = T)
+   # Evaluates redundancy
+   cat("Evaluating redundancy score....")
+   redundancy = if (length(cols_to_evaluate) < 2){
+      0
+   } else {
+      cormat = cor(file[,cols_to_evaluate, drop=F], use = "pairwise.complete.obs")
+      diag(cormat) = NA
+      mean(abs(cormat), na.rm = T)
+   }
 
+   # Logging the result
+   cat(as.character(match.call()[2]), file_name, D,
+       TIMEDIFF,
+       redundancy,
+       paste0(F1_score, '\n'), sep = '\t', file = OUT_FILE, append = T)
    cat("\n")
 }
 
@@ -64,6 +76,9 @@ for (arff_file in file_list){
 
          # Clustine Strategy
          evaluate_strategy(clustine_feature_select, file, clu_assign, 3, arff_file)
+
+         # Clustine deduplicate
+         evaluate_strategy(clustine_deduplicate, file, clu_assign, 3, arff_file)
 
          # Clustine Just compute
          evaluate_strategy(clustine_just_compute, file, clu_assign, 3, arff_file)

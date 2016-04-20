@@ -6,11 +6,24 @@
 \usepackage{caption}
 \usepackage{subcaption}
 
+\usepackage{dirtytalk}
+
+
+\newenvironment{itemize0}
+{ 
+    \begin{itemize}
+        \setlength{\topsep}{0pt}
+        \setlength{\itemsep}{0pt}
+        \setlength{\parskip}{0pt}
+        \setlength{\parsep}{0pt} 
+}
+{ \end{itemize}  }
+
 \newtheorem{defi}{Definition}
 
 \begin{document}
 
-\title{Have a Chat with Clustine,\\Conversational Engine for Data Exploration}
+\title{Have a Chat with Clustine,\\Conversational Engine to Query Large Tables}
 
 \numberofauthors{2} %  in this sample file, there are a *total*
 \author{
@@ -27,22 +40,21 @@ Martin Kersten\\
 
 \maketitle
 \begin{abstract} 
-    Any data management system needs to work together with people, whose needs
-    determine the goals for the system, and who must provide the input and who
-    need to work effectively with the output. Data management systems will work
-    much better when they take account of the cognitive and physiological
-    characteristics of the people involved. Recent technology trends (such as
-    touch screens, motion detection, and voice recognition) are widening the
-    possibilities for users to interact with systems, and many
-    information-provision industries are shifting to personalized processing to
-    better target their services to the users’ wishes. HILDA is a new workshop
-    that will allow researchers and practitioners to exchange ideas and results
-    relating to how data management can be done with awareness of the people
-    who form part of the processes. 
+Given the recent advances of AI and the stellar popularity of messaging apps
+(e.g., WhatsApp), conversational engines are no longer seen as quirky artifacts
+of customer support services and computer science museums. Chatbots provide a
+mighty, lightweight and accessible way to propose services over the Internet.
+In this paper, we introduce Clustine, a system designed to help users query
+large tables through short messages. The main idea is to combine cluster
+analysis and text generation to compress the query results, describe then with
+natural language and make recommendations. We detail the architecture of our
+system, demonstrate it with two use cases, and present early experiments with
+10 real datasets to show that its promises are reachable.
 \end{abstract}
 
 \input{Content.tex}
 
+\small
 \bibliographystyle{abbrv}
 \bibliography{Clustine}
 \end{document}
