@@ -61,8 +61,6 @@ compute_col_clusters <- function(data, max_cols = 8, black_list = c()){
 ###############
 aggregate_moments <- function(counts, means, covm){
 
-   # TODO: check rounding and regularization errors...
-
    # Trivial case
    if (length(dim(covm)) < 3){
       out = list(
@@ -403,17 +401,3 @@ tell_me_clustine <- function(file_data){
    return(active)
 
 }
-
-
-############
-# Workflow #
-############
-# file_data = read.csv("~/Data/Files/oecd-wellbeing/regions-wellbeing.csv", sep="")
-# file_data$TIME  = NULL
-# file_data$ROWID = 1:nrow(file_data)
-#
-# result = tell_me_clustine(file_data)
-
-#file_data = read.arff("~/Data/Files/crime/communities.arff")
-#names(file_data)[names(file_data) == ""]
-#result = tell_me_clustine(file_data)
