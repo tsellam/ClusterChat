@@ -10,7 +10,7 @@ file_list <- list.files(path = files_location, pattern = "*.arff$")
 sizes <- file.info(paste0(files_location, "/", file_list))$size
 file_list <- file_list[order(sizes)]
 
-OUT_FILE <- "ExperimentsResults.log"
+OUT_FILE <- "ExperimentsResults_ALL.log"
 file.rename(OUT_FILE, paste0("OLD_", OUT_FILE))
 cat('Algorithm', 'File', 'ncol', 'Runtime', 'Redundancy', 'F1 Score\n',
     sep = '\t', file = OUT_FILE, append = T)
@@ -73,6 +73,9 @@ for (arff_file in file_list){
       clu_assign = kmeans(file, centers=4, nstart = 5)$cluster
 
       for (trial in 1:3){
+
+         # All columns strategy
+         evaluate_strategy(all_cols, file, clu_assign, 3, arff_file)
 
          # Clustine Strategy
          evaluate_strategy(clustine_feature_select, file, clu_assign, 3, arff_file)

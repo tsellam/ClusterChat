@@ -9,6 +9,11 @@ random_cols <- function(data, objective, d){
    names(data)[s]
 }
 
+# ALL COLUMNS #
+all_cols <- function(data, objective, d){
+   names(data)
+}
+
 # WRAP kNN #
 wrap_kNN <- function(data, objective, d){
 

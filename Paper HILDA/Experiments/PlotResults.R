@@ -4,16 +4,18 @@ library(ggplot2)
 library(ggthemes)
 
 # Loads data
-file_data = read.delim("ExperimentsResults6.log", stringsAsFactors = F)
+file_data = read.delim("ExperimentsResults_ALL.log", stringsAsFactors = F)
 
 # BLack lists
 results = file_data %>%
-            filter(!File %in% c('internet_usage.arff',
+            filter(!File %in% c(#'internet_usage.arff',
                                 'liver.arff',
-                                'diabetes.arff',#'adult.arff', 'bank.arff', 'communities.arff',
+                                'diabetes.arff',
+                                #'MagicTelesc
                                 'glass.arff',
-                                'vowel.arff',
-                                'pendigits.arff'))
+                                'vowel.arff'
+                                #'pendigits.arff'
+                                ))
 
 # Aggregates several runs
 results = results %>%
@@ -65,18 +67,20 @@ results$Algorithm = factor(results$Algorithm,
                                 "clustine_deduplicate",
                                 "clustine_just_compute",
                                 "Clustine Embedded",
-                                "random_cols",
                                 "MI_rank",
-                                "wrap_kNN"
+                                "wrap_kNN",
+                                "all_cols",
+                                "random_cols"
                                 ),
                      labels = c(
                                  "Clustine",
                                  "Clustine Dedup.",
                                  "clustine_just_compute",
                                  "Clustine Embedded",
-                                 "Random",
                                  "MutualInfo",
-                                 "Wrap kNN"
+                                 "Wrap kNN",
+                                 "Full Space",
+                                 "Random"
                         ))
 
 #########################
@@ -86,7 +90,7 @@ to_plot = results %>%
             filter(!Algorithm %in% c('clustine_just_compute'))
 
 acc_plot = ggplot(data = to_plot,
-                  mapping = aes(x = File, y = F1, fill=Algorithm)) +
+                  mapping = aes(x = File, y = F1, fill=Algorithm, color=Algorithm)) +
             geom_bar(stat = 'identity', position = "dodge", width = .75) +
             scale_x_discrete('Dataset') +
             scale_y_continuous('Predict. Score (F1)', lim = c(0,1))
@@ -94,33 +98,34 @@ acc_plot = ggplot(data = to_plot,
 acc_plot = acc_plot +
             theme_few() +
             scale_fill_few() +
+            scale_color_few()+
    theme(axis.text.x = element_text(angle = 15, hjust = 1))
 
 
 print(acc_plot)
-ggsave('F1_Scores.pdf', acc_plot, width = 10, height = 2)
+ggsave('F1_Scores.pdf', acc_plot, width = 12, height = 2.3)
 
-#######################
-# Plots deduplication #
-#######################
-
-to_plot = results %>%
-   filter(!Algorithm %in% c('clustine_just_compute', 'Random')) %>%
-   mutate(Redundancy = pmax(Redundancy, 0.01))
-
-red_plot = ggplot(data = to_plot,
-                  mapping = aes(x = File, y = Redundancy, fill=Algorithm)) +
-   geom_bar(stat = 'identity', position = "dodge", width = .75) +
-   scale_x_discrete('Dataset') +
-   scale_y_continuous('Redundancy', lim = c(0,1))
-
-red_plot = red_plot +
-   theme_few() +
-   scale_fill_few() +
-   theme(axis.text.x = element_text(angle = 15, hjust = 1))
-
-print(red_plot)
-ggsave('Red_Scores.pdf', red_plot, width = 10, height = 2)
+# #######################
+# # Plots deduplication #
+# #######################
+#
+# to_plot = results %>%
+#    filter(!Algorithm %in% c('clustine_just_compute', 'Random')) %>%
+#    mutate(Redundancy = pmax(Redundancy, 0.01))
+#
+# red_plot = ggplot(data = to_plot,
+#                   mapping = aes(x = File, y = Redundancy, fill=Algorithm)) +
+#    geom_bar(stat = 'identity', position = "dodge", width = .75) +
+#    scale_x_discrete('Dataset') +
+#    scale_y_continuous('Redundancy', lim = c(0,1))
+#
+# red_plot = red_plot +
+#    theme_few() +
+#    scale_fill_few() +
+#    theme(axis.text.x = element_text(angle = 15, hjust = 1))
+#
+# print(red_plot)
+# ggsave('Red_Scores.pdf', red_plot, width = 10, height = 2)
 
 #################
 # Plots Timings #
@@ -145,15 +150,16 @@ to_plot2 = results %>%
    ungroup
 
 to_plot = rbind(to_plot1, to_plot2) %>%
-            filter(!Algorithm %in% c('Random', 'Clustine Dedup.'))
+            filter(!Algorithm %in% c('Random', 'Clustine Dedup.',
+                                     'Full Space'))
 
 to_plot = to_plot %>%
-   mutate(Runtime = ifelse(Runtime < 0.01, 0.01, Runtime)) %>%
+   mutate(Runtime = ifelse(Runtime < 0.03, 0.03, Runtime)) %>%
    mutate(Exceed = ifelse(Runtime > 1.0, 'X', '')) %>%
    mutate(Runtime = ifelse(Runtime > 1.0, 1.0, Runtime))
 
 time_plot = ggplot(data = to_plot,
-                  mapping = aes(x = File, y = Runtime, fill=Algorithm, label = Exceed)) +
+                  mapping = aes(x = File, y = Runtime, fill=Algorithm, label = Exceed, color=Algorithm)) +
    geom_bar(stat = 'identity', position = "dodge", width = .75) +
    geom_text(aes(y=0.98), color="grey30", position = position_dodge(width=.75), size=4) +
    scale_x_discrete('Dataset') +
@@ -162,7 +168,8 @@ time_plot = ggplot(data = to_plot,
 time_plot = time_plot +
    theme_few() +
    theme(axis.text.x = element_text(angle = 15, hjust = 1)) +
+   scale_color_few()+
    scale_fill_few()
 
 print(time_plot)
-ggsave('Timings.pdf', time_plot, width = 10, height = 2)
+ggsave('Timings.pdf', time_plot, width = 12, height = 2)
