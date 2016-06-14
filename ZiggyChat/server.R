@@ -6,7 +6,7 @@ source("wrap_clustine.R")
 # Initializes session-wide variables #
 #######################################
 r_objects <- reactiveValues(
-  query = "",
+  query = character(0),
   board_elements = list(),
   elements_type  = list(),
   n_elts = 0
@@ -31,7 +31,7 @@ update_plot <- function(plot){
   update_chat('Clustine', "Here is the plot:")
 
   r_objects$n_elts <<- r_objects$n_elts + 1
-  r_objects$board_elements[[r_objects$n_elts]] <<- plot
+  r_objects$board_elements[[r_objects$n_elts]] <<- renderPlot({plot})
   r_objects$elements_type[[r_objects$n_elts]]  <<- "plot"
 }
 
@@ -39,8 +39,14 @@ update_table <- function(table){
   update_chat('Clustine', "Here is a sample from your selection:")
 
   r_objects$n_elts <<- r_objects$n_elts + 1
-  r_objects$board_elements[[r_objects$n_elts]] <<- table
+  r_objects$board_elements[[r_objects$n_elts]] <<- renderTable({table})
   r_objects$elements_type[[r_objects$n_elts]]  <<- "table"
+}
+
+reset_chat <- function(){
+  r_objects$elements_type  <<- list()
+  r_objects$board_elements <<- list()
+  r_objects$n_elts <<- 0
 }
 
 ####################
@@ -60,13 +66,11 @@ shinyServer(function(input, output, session) {
         )
 
       } else if (r_objects$elements_type[[i]] == "plot"){
-        tags$div(class="plot",
-                 renderPlot({r_objects$board_elements[[i]]})
+          tags$div(class="plot", r_objects$board_elements[[i]]
         )
 
       } else if (r_objects$elements_type[[i]] == "table"){
-        tags$div(class="table",
-                 renderTable({r_objects$board_elements[[i]]})
+          tags$div(class="table",r_objects$board_elements[[i]]
         )
       }
     })
@@ -93,12 +97,21 @@ shinyServer(function(input, output, session) {
   # Triggers Clustine when a query comes in the queue
   observe({
     r_objects$query
-    isolate({
-      answer <- clustine_react(r_objects$query)
-      if (!is.null(answer$plot))  update_plot(answer$plot)
-      if (!is.null(answer$table)) update_table(answer$table)
-      update_chat("Clustine", answer$text)
-    })
+    if (length(r_objects$query) > 0)
+      isolate({
+        answer <- clustine_react(r_objects$query)
+        if (!is.null(answer$plot))  update_plot(answer$plot)
+        if (!is.null(answer$table)) update_table(answer$table)
+        update_chat("Clustine", answer$text)
+        r_objects$query <<- character(0)
+
+        if (answer$reset){
+          cat("Reseting!")
+          reset_chat()
+          r_objects$query <<- "Zoom in 1"
+        }
+
+      })
   })
 
 # Initializes the session

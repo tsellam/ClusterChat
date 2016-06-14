@@ -1,49 +1,30 @@
 library(shiny)
 
 shinyUI(
-  bootstrapPage(
+  fluidPage(
     includeCSS("shinychat.css"),
-
     includeScript("sendOnEnter.js"),
 
-    div(class = "container-fluid",
+    fluidRow(
+      tags$head(tags$title("Clustine")),
+      div(style="padding: 10px 10px;",
+          h1("Clustine"),
+          h4("Let's write that query together")
+      )
+    ),
 
-      div(class = "row-fluid",
+    fluidRow(
+      div(class="chat-container", style="padding: 10px 10px;",
+        uiOutput("chat")
+      )
+    ),
 
-          tags$head(tags$title("Clustine")),
-
-          div(class="span6", style="padding: 10px 0px;",
-              h1("Clustine"),
-              h4("Let's write that query together")
-          )
-
+    fluidRow(
+      column(10,
+        textInput("entry", "", width ="100%")
       ),
-
-      div(class = "row-fluid",
-
-        mainPanel(
-
-          uiOutput("chat"),
-
-          fluidRow(
-            div(class="span10",
-              textInput("entry", "")
-            ),
-            div(class="span2 center",
-                actionButton("send", "Send")
-            )
-          )
-
-        )
-
-        # sidebarPanel(
-        #   textInput("user", "Your User ID:", value=""),
-        #   tags$hr(),
-        #   h5("Connected Users"),
-        #   uiOutput("userList"),
-        #   tags$hr()
-        # )
-
+      column(2,
+        actionButton("send", "Send")
       )
     )
   )

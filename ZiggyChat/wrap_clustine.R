@@ -1,6 +1,5 @@
-source("../Code/Clustine.R", chdir = TRUE)
+source("Clustine-demo.R", chdir = TRUE)
 
-set.seed(55555)
 
 extract_numbers <- function(str){
   matches <- gregexpr(pattern = '[0-9]+', str)
@@ -36,18 +35,20 @@ clustine_react <- function(input){
   out_text <- ""
   plot  <- NULL
   table <- NULL
+  reset <- FALSE
 
   # Parses the input and decides what to to
   go_zoom <- grepl("zoom", input, ignore.case = TRUE)
   go_zoom_in <- grepl("[0-9]+", input, ignore.case = TRUE)
-  go_alternative <- grepl("alternative|view|other", input, ignore.case = TRUE)
+  go_alternative <- grepl("alternative|other", input, ignore.case = TRUE)
   go_plot <- grepl("see|show", input, ignore.case = TRUE)
   go_plot_plot <- grepl("graph|chart|visualization|plot", input, ignore.case = TRUE)
   go_plot_table <- grepl("table|sample", input, ignore.case = TRUE)
   go_exit <- grepl("done|finish|exit|leave|quit", input, ignore.case = TRUE)
+  go_reset <- grepl("reset|restart", input, ignore.case = TRUE)
 
   go_sum <- (go_zoom | go_zoom_in) + go_alternative +
-            (go_plot | go_plot_plot | go_plot_table) + go_exit
+            (go_plot | go_plot_plot | go_plot_table) + go_exit + go_reset
 
   if (go_sum != 1){
     out_text <- "I did not understand your input, could you please rephrase?"
@@ -86,6 +87,10 @@ clustine_react <- function(input){
       out_text <- "Do you want to see a plot, or a sample of the table?"
     }
 
+  } else if (go_reset) {
+    reset()
+    reset <- TRUE
+
   } else if (go_exit){
     cat("Exit request detected\n")
     stopApp()
@@ -94,10 +99,12 @@ clustine_react <- function(input){
   return(list(
     text  = out_text,
     plot  = plot,
-    table = table
+    table = table,
+    reset = reset
   ))
 
 }
+
 
 generate_table <- function(){
   to_print = file_data[active,, drop=F]
@@ -133,8 +140,10 @@ generate_plot <-function(){
       scale_color_discrete('Cluster labels') +
       scale_fill_discrete('Cluster labels') +
       scale_shape('Cluster labels') +
-      theme(legend.key.height	= unit(1, "cm"),
-            text = element_text(size=14))
+      theme(legend.key.height	= unit(1.2, "cm"),
+            text = element_text(size=14),
+            legend.text = element_text(size=13)
+            )
 
   return(p)
 }
@@ -145,17 +154,14 @@ zoom_into_cluster <- function(clu_num){
     return("Cluster not found<br/>")
 
   # Selects tuples to zoom in
-  active <<- active & (clusters == clu_num)
-  if (sum(active) < 5)
+  active <<- active & (clusters %in% clu_num)
+  if (sum(active) < 10)
     return("Can't zoom anymore, the data is too small!<br/>")
 
   data_select <- data[active,,drop=F]
 
   # Retsets black list
   black_list <<- c()
-
-  # Clusters columns
-  column_clusters <- compute_col_clusters(data_select, MAX_COLS, black_list)
 
   # Clusters tuples
   model <- computeModel(data_select)
@@ -166,9 +172,7 @@ zoom_into_cluster <- function(clu_num){
   cluster_infos <<- clusters_stats(model)
 
   # Generates descriptions
-  cluster_descriptions <<- describe_clusters(cluster_infos,
-                                            column_clusters,
-                                            black_list)
+  cluster_descriptions <<- describe_clusters(cluster_infos, black_list)
   text_description <- wrap_cluster_description_html(cluster_descriptions)
 
   # Pretty output:
@@ -188,22 +192,29 @@ get_alternative_description <- function(){
   # Updates black list
   cur_col_names <- unique(unlist(sapply(cluster_descriptions, names)))
   cat("Added", paste0(cur_col_names), " to black list\n")
-  black_list <- unique(c(black_list, cur_col_names))
+  black_list <<- unique(c(black_list, cur_col_names))
 
   # Reclusters columns
   data_select <- data[active,,drop=F]
-  column_clusters <- compute_col_clusters(data_select, MAX_COLS, black_list)
 
   # Generates descriptions
-  cluster_descriptions <<- describe_clusters(cluster_infos,
-                                            column_clusters,
-                                            black_list)
+  new_description <- describe_clusters(cluster_infos, black_list)
+  if (length(new_description) > 0) cluster_descriptions <<- new_description
+  else return("Sorry, I am out of inspiration!")
   text_description <- wrap_cluster_description_html(cluster_descriptions)
 
   # Pretty output:
-  out <- "Ok! here is an alternative description:"
+  out <- "Ok! Here is an alternative description:"
   out <- paste0(out, text_description)
   out <- paste0(out, 'Do you want to zoom, get an alternative description, or see the clusters?<br/>')
 
   return(out)
+}
+
+reset <- function(){
+  active     <<- rep(T, nrow(data))
+  clusters   <<- rep(1, nrow(data))
+  black_list <<- character(0)
+  cluster_infos        <<- list()
+  cluster_descriptions <<- list()
 }

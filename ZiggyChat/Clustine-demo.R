@@ -31,6 +31,19 @@ computeModel <- function(data, max_clusters = 4, sample_init_size = 200){
 
   set.seed(55555)
 
+  # Removes columns with only one distinct value
+  one_val <- sapply(data, function(col) length(na.omit(unique(col))) < 2)
+  data <- data[,!one_val, drop=F]
+  if (ncol(data) <= 1){
+    warning("Data set did not survive cleaning, sorry!")
+    return(NULL)
+  }
+
+  if (nrow(data) <= 5){
+    warning("Not enough tuples - can't work!")
+    return(NULL)
+  }
+
    if (nrow(data) > sample_init_size)
       sample_init = sample(nrow(data), size=sample_init_size,  replace = F)
    else
@@ -161,38 +174,52 @@ interpret_d <- function(d){
    else        'low'
 }
 
-describe_clusters <- function(cluster_tests, column_clusters, black_list){
+describe_clusters <- function(cluster_tests, black_list, max_cols=2){
 
-      cluster_descriptions = list()
+      # Selects the columns to keep
+      all_magnitudes <- lapply(cluster_tests, function(cluster_data){
 
-      # Generates the magnitude descriptions
-      for (clu in 1:length(cluster_tests)){
+        # Filters out blacklisted columns
+        cand_cols = names(cluster_data$cohen_ds)
+        cand_cols = cand_cols[!cand_cols %in% black_list]
 
-         cluster_data = cluster_tests[[clu]]
+        # Filters out uncharacteristic columns
+        test_pass_cols = names(which(cluster_data$walds_test))
+        cand_cols = cand_cols[cand_cols %in% test_pass_cols]
 
-         # Filters out uncharacteristic or blacklisted columns
-         cand_cols = names(sort(abs(cluster_data$cohen_ds), decreasing = T))
-         cand_cols = cand_cols[!cand_cols %in% black_list]
+        # Extracts and absolute values Cohen's d
+        abs(cluster_data$cohen_ds[cand_cols])
 
-         test_pass_cols = names(which(cluster_data$walds_test))
-         cand_cols = cand_cols[cand_cols %in% test_pass_cols]
+      })
+      all_magnitudes <- unlist(all_magnitudes)
 
-         # Deduplicates them
-         map_cluster = unique(column_clusters$clustering[cand_cols])
-         centroid_cols = column_clusters$medoids[map_cluster]
+      col_names <- unique(names(all_magnitudes))
+      avg_magnitudes <- sapply(col_names, function(col){
+        col_magn <- all_magnitudes[names(all_magnitudes) == col]
+        if (length(col_magn) != length(cluster_tests)) return(NA)
+        mean(as.numeric(col_magn), na.rm = T)
+      })
+
+      avg_magnitudes <- na.omit(avg_magnitudes)
+      char_scores    <- sort(avg_magnitudes, decreasing = T)[1:max_cols]
+      char_columns   <- names(char_scores)
+
+      if (length(char_columns) < max_cols){
+        warning('Not enough characteristic columns!')
+        return(list())
+      }
+
+      # Creates the descriptions
+      cluster_descriptions = lapply(cluster_tests, function(cluster_data){
 
          # Produces a magnitude description
-         centroid_ds = cluster_data$cohen_ds[centroid_cols]
-         magnitudes  = sapply(centroid_ds, interpret_d)
-         names(magnitudes) = centroid_cols
+         cand_ds = cluster_data$cohen_ds[char_columns]
+         magnitudes  = sapply(cand_ds, interpret_d)
+         names(magnitudes) = char_columns
 
-         # Sorts alphabetically
-         magnitudes <- magnitudes[order(names(magnitudes))]
+         return(magnitudes)
+      })
 
-         # Wraps
-         cluster_descriptions[[clu]] = magnitudes
-
-      }
 
       # Resolves conflicts
       for (clu1 in 1:(length(cluster_tests)-1)){
@@ -205,8 +232,8 @@ describe_clusters <- function(cluster_tests, column_clusters, black_list){
              if (all(desc1[sort(names(desc1))] == desc2[sort(names(desc2))])){
                for (col in names(desc1)){
 
-                  if (cluster_tests[[clu1]]$cohen_ds[col] >
-                          cluster_tests[[clu2]]$cohen_ds[col]){
+                  if (abs(cluster_tests[[clu1]]$cohen_ds[col]) >
+                        abs(cluster_tests[[clu2]]$cohen_ds[col])){
 
                      cluster_descriptions[[clu1]][col] = paste0(
                         'very ', cluster_descriptions[[clu1]][col]
@@ -344,94 +371,7 @@ plot_explanation <- function(data, cluster_descriptions, model){
             legend.key.height	= unit(1, "cm"),
             legend.title = element_blank())
 
-#   ggsave(filename = paste0('Validation', PLOT_INDEX, '.pdf'),
-#        out_plot,
-#        width = 8.5,
-#        height = 12,
-#        units = "cm")
-#    PLOT_INDEX <<- PLOT_INDEX + 1
 
    return(out_plot)
 
 }
-
-tell_me_about <- function(data, plotting=F){
-
-   # Clustering
-   model = computeModel(data)
-   # Testing
-   cluster_tests = clusters_stats(model)
-
-   # Describing
-   satisfied = F
-   black_list = c()
-
-   while(!satisfied){
-
-      # Generates clusters of columns
-      column_clusters = compute_col_clusters(data, black_list = black_list)
-
-      # Generates descriptions
-      cluster_descriptions = describe_clusters(cluster_tests,
-                                               column_clusters,
-                                               black_list)
-      # Showing plot
-      if (plotting) plot_explanation(data, cluster_descriptions, model)
-
-      # Output
-      text_description = wrap_cluster_description(cluster_descriptions)
-      cat("*** Here are the clusters:\n", text_description, sep = '')
-
-      # Feedback
-      input_sat = readline(prompt="*** Satisfied? (Y/N)")
-      satisfied = !(input_sat=='N')
-
-      # Updates black list for potential next iteration
-      characteristic_col = extract_char_cols(cluster_descriptions)
-      black_list = c(black_list, characteristic_col)
-
-   }
-
-   # Returns model
-   return(model)
-}
-
-tell_me_clustine <- function(file_data){
-
-   # Preprocessing
-   data = preprocess(file_data)
-
-   # Initializes data structures
-   sel_clusters = 10000
-   active = rep(T, nrow(data))
-
-   # Main loop
-   while(sel_clusters != 0 & sum(active) > 10){
-      tryCatch({
-         model = tell_me_about(data[active,])
-         user_input = readline(prompt="*** Zoom into cluster: ")
-
-         sel_clusters = unlist(strsplit(user_input, ','))
-         sel_clusters = as.numeric(sel_clusters)
-
-         active = active & (model$classification %in% sel_clusters |
-                               sel_clusters == 0)
-
-         }, error = function(e){
-            print(e)
-            sel_clusters = 0
-            active = rep(F, length(active))
-            View(file_data[active,])
-            stop()
-      })
-   }
-
-   View(file_data[active,])
-   return(active)
-
-}
-#
-#
-# # Workflow
-# crime <- read.arff("../Data/communities.arff")
-# tell_me_clustine(crime)
