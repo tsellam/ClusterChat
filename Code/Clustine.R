@@ -25,7 +25,7 @@ preprocess <- function(file_data){
 ###################
 # Clustering Step #
 ###################
-computeModel <- function(data, max_clusters = 3, sample_init_size = 900){
+computeModel <- function(data, max_clusters = 4, sample_init_size = 200){
    cat("Clustering a data set with", ncol(data), "columns and",
        nrow(data), "rows.\n")
 
@@ -42,7 +42,7 @@ computeModel <- function(data, max_clusters = 3, sample_init_size = 900){
    return(model)
 }
 
-compute_col_clusters <- function(data, max_cols = 8, black_list = c()){
+compute_col_clusters <- function(data, max_cols = 3, black_list = c()){
    cat('Clustering columns.\n')
 
    cor_matrix = 1 - cor(data)
@@ -101,7 +101,7 @@ aggregate_moments <- function(counts, means, covm){
 }
 
 
-tests_clusters <- function(model, sig = 0.01){
+clusters_stats <- function(model, sig = 0.01){
 
    cat("Cluster testing phase\n")
 
@@ -223,6 +223,32 @@ describe_clusters <- function(cluster_tests, column_clusters, black_list){
       return(cluster_descriptions)
 }
 
+
+
+wrap_cluster_description_html <- function(cluster_descriptions){
+
+  out = '<ol>'
+
+  for (k in 1:length(cluster_descriptions)){
+
+    out = paste0(out, '<li>')
+    clu_desc = cluster_descriptions[[k]]
+
+    cols       = names(clu_desc)
+    magnitudes = clu_desc
+
+    for (i in 1:length(cols)){
+      out = paste0(out, paste(magnitudes[i], cols[i]))
+      if (i < length(cols)) out = paste0(out, ', ')
+    }
+
+    out = paste0(out, '</li>\n')
+  }
+
+  out = paste0(out, '</ol>')
+
+}
+
 wrap_cluster_description <- function(cluster_descriptions){
 
    out = ''
@@ -313,25 +339,25 @@ plot_explanation <- function(data, cluster_descriptions, model){
             legend.key.height	= unit(1, "cm"),
             legend.title = element_blank())
 
-   ggsave(filename = paste0('Validation', PLOT_INDEX, '.pdf'),
-        out_plot,
-        width = 8.5,
-        height = 12,
-        units = "cm")
-
-   PLOT_INDEX <<- PLOT_INDEX + 1
+#   ggsave(filename = paste0('Validation', PLOT_INDEX, '.pdf'),
+#        out_plot,
+#        width = 8.5,
+#        height = 12,
+#        units = "cm")
+#    PLOT_INDEX <<- PLOT_INDEX + 1
 
    print(out_plot)
 
+   return(out_plot)
 
 }
 
-tell_me_about <- function(data, plotting=T){
+tell_me_about <- function(data, plotting=F){
 
    # Clustering
    model = computeModel(data)
    # Testing
-   cluster_tests = tests_clusters(model)
+   cluster_tests = clusters_stats(model)
 
    # Describing
    satisfied = F
@@ -401,3 +427,8 @@ tell_me_clustine <- function(file_data){
    return(active)
 
 }
+#
+#
+# # Workflow
+# crime <- read.arff("../Data/communities.arff")
+# tell_me_clustine(crime)
