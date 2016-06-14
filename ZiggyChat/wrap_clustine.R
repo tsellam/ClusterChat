@@ -40,7 +40,7 @@ clustine_react <- function(input){
   # Parses the input and decides what to to
   go_zoom <- grepl("zoom", input, ignore.case = TRUE)
   go_zoom_in <- grepl("[0-9]+", input, ignore.case = TRUE)
-  go_alternative <- grepl("alternative|other", input, ignore.case = TRUE)
+  go_alternative <- grepl("alternative", input, ignore.case = TRUE)
   go_plot <- grepl("see|show", input, ignore.case = TRUE)
   go_plot_plot <- grepl("graph|chart|visualization|plot", input, ignore.case = TRUE)
   go_plot_table <- grepl("table|sample", input, ignore.case = TRUE)
@@ -84,7 +84,7 @@ clustine_react <- function(input){
       table <- generate_table()
       out_text <- "What do you want to do now?"
     } else {
-      out_text <- "Do you want to see a plot, or a sample of the table?"
+      out_text <- "Do you want to see a plot or a sample of the table?"
     }
 
   } else if (go_reset) {
@@ -179,7 +179,7 @@ zoom_into_cluster <- function(clu_num){
   out <- paste0('I crunched ',sum(active),' tuples and ')
   out <- paste0(out, 'I found ', length(unique(na.omit(clusters))),' clusters:<br/>')
   out <- paste0(out, text_description)
-  out <- paste0(out, 'Do you want to zoom, get an alternative description, or see the clusters?<br/>')
+  out <- paste0(out, 'Do you want to zoom, get an alternative description, or see the data?<br/>')
 
   return(out)
 }
