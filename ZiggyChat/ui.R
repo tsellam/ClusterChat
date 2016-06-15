@@ -1,31 +1,30 @@
 library(shiny)
 
 shinyUI(
-  fluidPage(
+  fillPage(padding = 10,
     includeCSS("shinychat.css"),
     includeScript("sendOnEnter.js"),
 
-    fluidRow(
-      tags$head(tags$title("Clustine")),
-      div(style="padding: 10px 10px;",
+    fillRow(
+        div(
           h1("Clustine"),
           h4("Let's write that query together")
-      )
+      ), height="90px"
     ),
 
-    fluidRow(
-      div(class="chat-container", style="padding: 10px 10px;",
+    fillRow(
+      div(id="chat-container",
         uiOutput("chat")
-      )
+      ), height="70%"
     ),
 
-    fluidRow(
-      column(10,
+    fillRow(
+      fillCol(
         textInput("entry", "", width ="100%")
       ),
-      column(2,
+      fillCol(
         actionButton("send", "Send")
-      )
+      ), height="50px"
     )
   )
 )

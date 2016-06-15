@@ -14,15 +14,15 @@ jQuery(document).ready(function(){
 // comments.
 var oldContent = null;
 window.setInterval(function() {
-  var elem = document.getElementById('chat');
+  var elem = document.getElementById('chat-container');
   if (oldContent != elem.innerHTML){
     scrollToBottom();
   }
-  oldContent = elem.innerHTML;  
+  oldContent = elem.innerHTML;
 }, 300);
 
 // Scroll to the bottom of the chat window.
 function scrollToBottom(){
-  var elem = document.getElementById('chat');
+  var elem = document.getElementById('chat-container');
   elem.scrollTop = elem.scrollHeight;
 }
