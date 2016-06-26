@@ -14,6 +14,9 @@ SAMPLE_SIZE <- 10
 
 cat("Reads data set.....\n")
 file_data <- read.arff("../Data/communities.arff")
+names(file_data)[names(file_data) == 'PctPopUnderPov']   <- 'PopUnderPovertyLine'
+names(file_data)[names(file_data) == 'PctPersDenseHous'] <- 'PctDenseHousing'
+names(file_data)[names(file_data) == 'FemalePctDiv']   <-   'PctFemaleDivorve'
 
 cat("Preprocessing.....\n")
 data <- preprocess(file_data)
@@ -24,6 +27,7 @@ clusters   <- rep(1, nrow(data))
 black_list <- character(0)
 cluster_infos        <- list()
 cluster_descriptions <- list()
+initialized          <- FALSE
 
 ##############
 # Clustering #
@@ -38,6 +42,7 @@ clustine_react <- function(input){
   reset <- FALSE
 
   # Parses the input and decides what to to
+  go_start <- grepl("go|start|begin|work|yes|sure", input, ignore.case = TRUE)
   go_zoom <- grepl("zoom", input, ignore.case = TRUE)
   go_zoom_in <- grepl("[0-9]+", input, ignore.case = TRUE)
   go_alternative <- grepl("alternative", input, ignore.case = TRUE)
@@ -45,13 +50,17 @@ clustine_react <- function(input){
   go_plot_plot <- grepl("graph|chart|visualization|plot", input, ignore.case = TRUE)
   go_plot_table <- grepl("table|sample", input, ignore.case = TRUE)
   go_exit <- grepl("done|finish|exit|leave|quit", input, ignore.case = TRUE)
-  go_reset <- grepl("reset|restart", input, ignore.case = TRUE)
+  go_reset <- grepl("reset", input, ignore.case = TRUE)
 
-  go_sum <- (go_zoom | go_zoom_in) + go_alternative +
+  go_sum <- go_start + (go_zoom | go_zoom_in) + go_alternative +
             (go_plot | go_plot_plot | go_plot_table) + go_exit + go_reset
 
   if (go_sum != 1){
     out_text <- "I did not understand your input, could you please rephrase?"
+
+  } else if (go_start & !initialized){
+    initialized <<- T
+    out_text <- zoom_into_cluster(1)
 
   } else  if (go_zoom & !go_zoom_in){
     out_text  <- "In which cluster would you like to zoom?"
@@ -94,6 +103,9 @@ clustine_react <- function(input){
   } else if (go_exit){
     cat("Exit request detected\n")
     stopApp()
+
+  } else {
+    out_text <- "I did not understand your input, sorry!"
   }
 
   return(list(
@@ -140,7 +152,7 @@ generate_plot <-function(){
       scale_color_discrete('Cluster labels') +
       scale_fill_discrete('Cluster labels') +
       scale_shape('Cluster labels') +
-      theme(legend.key.height	= unit(1.2, "cm"),
+      theme(legend.key.height	= unit(2, "cm"),
             text = element_text(size=14),
             legend.text = element_text(size=13)
             )
@@ -179,7 +191,7 @@ zoom_into_cluster <- function(clu_num){
   out <- paste0('I crunched ',sum(active),' tuples and ')
   out <- paste0(out, 'I found ', length(unique(na.omit(clusters))),' clusters:<br/>')
   out <- paste0(out, text_description)
-  out <- paste0(out, 'Do you want to zoom, get an alternative description, or see the data?<br/>')
+  out <- paste0(out, 'Do you want to zoom, see the data or get an alternative description?<br/>')
 
   return(out)
 }
@@ -206,7 +218,7 @@ get_alternative_description <- function(){
   # Pretty output:
   out <- "Ok! Here is an alternative description:"
   out <- paste0(out, text_description)
-  out <- paste0(out, 'Do you want to zoom, get an alternative description, or see the clusters?<br/>')
+  out <- paste0(out, 'Do you want to zoom, see the data or get an alternative description?<br/>')
 
   return(out)
 }
@@ -217,4 +229,5 @@ reset <- function(){
   black_list <<- character(0)
   cluster_infos        <<- list()
   cluster_descriptions <<- list()
+  initialized          <<- FALSE
 }

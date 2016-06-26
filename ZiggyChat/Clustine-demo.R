@@ -306,8 +306,10 @@ wrap_cluster_description <- function(cluster_descriptions){
 }
 
 list_wrap_description <- function(cluster_descriptions){
-   sapply(cluster_descriptions, function(clu_desc){
-      out = ''
+   sapply(1:length(cluster_descriptions), function(i){
+
+      clu_desc = cluster_descriptions[[i]]
+      out = paste0('Cluster ',i,':\n')
 
       cols       = names(clu_desc)
       magnitudes = clu_desc

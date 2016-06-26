@@ -116,7 +116,7 @@ shinyServer(function(input, output, session) {
 
 # Initializes the session
   isolate({
-    update_chat("Clustine", "Welcome user, let's look at crime data")
-    r_objects$query <<- "Zoom in 1"
+    update_chat("Clustine", "Welcome user. Shall we get to work?")
+    #r_objects$query <<- "Zoom in 1"
   })
 })
